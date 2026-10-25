@@ -8,9 +8,21 @@ export const config = {
   },
 };
 
+// Groq hosts Whisper behind an OpenAI-compatible API. TRANSCRIBE_BASE_URL can
+// point at any other OpenAI-compatible provider (e.g. https://api.openai.com/v1).
+const DEFAULT_TRANSCRIBE_BASE_URL = "https://api.groq.com/openai/v1";
+const DEFAULT_TRANSCRIBE_MODEL = "whisper-large-v3-turbo";
+
 export default async function handler(req: any, res: any) {
+  if (!process.env.GROQ_API_KEY) {
+    console.error("Missing env var GROQ_API_KEY");
+    res.status(500).json({ error: "Error" });
+    return;
+  }
+
   const configuration = new Configuration({
-    apiKey: process.env.OPENAI_API_KEY,
+    apiKey: process.env.GROQ_API_KEY,
+    basePath: process.env.TRANSCRIBE_BASE_URL || DEFAULT_TRANSCRIBE_BASE_URL,
   });
   const openai = new OpenAIApi(configuration);
 
@@ -37,29 +49,39 @@ export default async function handler(req: any, res: any) {
   try {
     const resp = await openai.createTranscription(
       fs.createReadStream(videoFilePath),
-      "whisper-1"
+      process.env.TRANSCRIBE_MODEL || DEFAULT_TRANSCRIBE_MODEL
       // Uncomment the line below if you would also like to capture filler words:
       // "Please include any filler words such as 'um', 'uh', 'er', or other disfluencies in the transcription. Make sure to also capitalize and punctuate properly."
     );
 
     const transcript = resp?.data?.text;
 
-    // Content moderation check
-    const response = await openai.createModeration({
-      input: resp?.data?.text,
-    });
+    // Content moderation check: only OpenAI offers a moderation endpoint, so
+    // this runs only when an OpenAI key is configured.
+    if (process.env.OPENAI_API_KEY) {
+      const moderation = new OpenAIApi(
+        new Configuration({ apiKey: process.env.OPENAI_API_KEY })
+      );
+      const response = await moderation.createModeration({
+        input: transcript,
+      });
 
-    if (response?.data?.results[0]?.flagged) {
-      res
-        .status(200)
-        .json({ error: "Inappropriate content detected. Please try again." });
-      return;
+      if (response?.data?.results[0]?.flagged) {
+        res
+          .status(200)
+          .json({ error: "Inappropriate content detected. Please try again." });
+        return;
+      }
     }
 
     res.status(200).json({ transcript });
     return resp.data;
-  } catch (error) {
-    console.error("server error", error);
+  } catch (error: any) {
+    console.error(
+      "server error",
+      error?.response?.status,
+      error?.response?.data?.error?.message ?? error?.message
+    );
     res.status(500).json({ error: "Error" });
   }
 }
