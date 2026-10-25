@@ -78,7 +78,7 @@ npx create-next-app liftoff --example "https://github.com/Tameyer41/liftoff"
 
 Liftoff uses FFmpeg to transcode the raw video into MP3. Chrome, Safari, and Firefox all record with different codecs, and FFmpeg is great for standardizing them.
 
-We then send the audio directly to be transcribed by OpenAI's Whisper endpoint, and then stream feedback from the edge using DeepSeek's `deepseek-chat` model (set `DEEPSEEK_API_KEY`). Whisper transcription and content moderation still use `OPENAI_API_KEY`, since DeepSeek has no speech-to-text API.
+We then send the audio directly to be transcribed by Whisper on Groq (set `GROQ_API_KEY`), and then stream feedback from the edge using DeepSeek's `deepseek-chat` model (set `DEEPSEEK_API_KEY`). DeepSeek has no speech-to-text API, hence the separate transcription provider. The content moderation check uses OpenAI and only runs when `OPENAI_API_KEY` is set.
 
 ## Author
 
