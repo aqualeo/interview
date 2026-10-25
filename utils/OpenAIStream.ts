@@ -20,8 +20,11 @@ export interface OpenAIStreamPayload {
   presence_penalty: number;
   max_tokens: number;
   stream: boolean;
-  n: number;
 }
+
+// DeepSeek exposes an OpenAI-compatible chat completions API.
+// DEEPSEEK_BASE_URL can point at any other OpenAI-compatible provider.
+const DEFAULT_BASE_URL = "https://api.deepseek.com";
 
 export async function OpenAIStream(payload: OpenAIStreamPayload) {
   const encoder = new TextEncoder();
@@ -29,14 +32,19 @@ export async function OpenAIStream(payload: OpenAIStreamPayload) {
 
   let counter = 0;
 
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+  const baseUrl = process.env.DEEPSEEK_BASE_URL || DEFAULT_BASE_URL;
+  const res = await fetch(`${baseUrl}/chat/completions`, {
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY ?? ""}`,
+      Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY ?? ""}`,
     },
     method: "POST",
     body: JSON.stringify(payload),
   });
+
+  if (!res.ok) {
+    throw new Error(`Chat completion request failed with status ${res.status}`);
+  }
 
   const stream = new ReadableStream({
     async start(controller) {
