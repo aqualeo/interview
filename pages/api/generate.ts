@@ -1,7 +1,7 @@
 import { OpenAIStream, OpenAIStreamPayload } from "@/utils/OpenAIStream";
 
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error("Missing env var from OpenAI");
+if (!process.env.DEEPSEEK_API_KEY) {
+  throw new Error("Missing env var DEEPSEEK_API_KEY");
 }
 
 export const config = {
@@ -18,7 +18,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   const payload: OpenAIStreamPayload = {
-    model: "gpt-3.5-turbo",
+    model: process.env.DEEPSEEK_MODEL || "deepseek-chat",
     messages: [
       {
         role: "system",
@@ -33,7 +33,6 @@ const handler = async (req: Request): Promise<Response> => {
     presence_penalty: 0,
     max_tokens: 450,
     stream: true,
-    n: 1,
   };
 
   const stream = await OpenAIStream(payload);
